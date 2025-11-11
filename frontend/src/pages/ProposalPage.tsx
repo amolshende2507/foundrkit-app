@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import axios from 'axios'; // We'll need to install this if you haven't
-
+import { useAuth } from '../context/AuthContext';
 const ProposalPage = () => {
+  const { session } = useAuth();
   const [clientName, setClientName] = useState('');
   const [projectSummary, setProjectSummary] = useState('');
   const [tone, setTone] = useState('Professional');
@@ -10,16 +11,30 @@ const ProposalPage = () => {
 
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!session) { // Safety check
+      alert("You must be logged in to generate a proposal.");
+      return;
+    }
     setIsLoading(true);
     setGeneratedProposal('');
 
     try {
-      const response = await axios.post('http://127.0.0.1:8000/api/proposals/generate', {
-        client_name: clientName,
-        project_summary: projectSummary,
-        tone: tone,
-      });
+      // 3. Update the axios call
+      const response = await axios.post(
+        'http://127.0.0.1:8000/api/proposals/generate',
+        { // The data body is the same
+          client_name: clientName,
+          project_summary: projectSummary,
+          tone: tone,
+        },
+        { // NEW: Add headers with the auth token
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+        }
+      );
       setGeneratedProposal(response.data.proposal_text);
+      alert("Proposal generated and saved successfully!"); // Add a success message
     } catch (error) {
       console.error("Error generating proposal:", error);
       alert("Failed to generate proposal. Please check the console for details.");
@@ -27,6 +42,7 @@ const ProposalPage = () => {
       setIsLoading(false);
     }
   };
+
 
   return (
     <div>
